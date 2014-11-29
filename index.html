@@ -36,18 +36,23 @@
 <h1>
 <a id="what-does-the-code-formatter-do" class="anchor" href="#what-does-the-code-formatter-do" aria-hidden="true"><span class="octicon octicon-link"></span></a>What does the Code Formatter do?</h1>
 
-<p><code>vendor/bin/fmt.php filename filename2 ... filenameN</code></p>
+It analyses your code and put in K&R format or, if you ask, PSR1, PSR2, or both.<br><br>
 
+<p><code>vendor/bin/fmt.php filename filename2 ... filenameN</code></p>
+or<br><br>
+<p><code>vendor/bin/fmt.php --psr filename filename2 ... filenameN</code></p>
+Also you may want to take a look the Sublime Text's plugin <a href="https://github.com/dericofilho/sublime-phpfmt" target="_blank">sublime-phpfmt</a>, which uses this tool to format the code for you.
+<br><br>
 <h3>
 <a id="kr-configuration" class="anchor" href="#kr-configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>K&amp;R configuration</h3>
 
 <table>
 <tr>
-<td>Before</td>
-<td>After</td>
+<td style="text-align: left">Before</td>
+<td style="text-align: left">After</td>
 </tr>
 <tr>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 for($i = 0; $i &lt; 10; $i++)
 {
@@ -56,7 +61,7 @@ echo "Flipflop";
 }
 </code></pre>
 </td>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 for ($i = 0; $i &lt; 10; $i++) {
     if ($i%2 == 0) {
@@ -67,14 +72,14 @@ for ($i = 0; $i &lt; 10; $i++) {
 </td>
 </tr>
 <tr>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 $a = 10;
 $otherVar = 20;
 $third = 30;
 </code></pre>
 </td>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 $a        = 10;
 $otherVar = 20;
@@ -84,7 +89,7 @@ $third    = 30;
 </td>
 </tr>
 <tr>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 namespace NS\Something;
 use \OtherNS\C;
@@ -97,7 +102,7 @@ $b = new C();
 $d = new D();
 </code></pre>
 </td>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 namespace NS\Something;
 
@@ -119,11 +124,11 @@ $d = new D();
 
 <table>
 <tr>
-<td>Before</td>
-<td>After</td>
+<td style="text-align: left">Before</td>
+<td style="text-align: left">After</td>
 </tr>
 <tr>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 for($i = 0; $i &lt; 10; $i++)
 {
@@ -132,7 +137,7 @@ echo "Flipflop";
 }
 </code></pre>
 </td>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 for ($i = 0; $i &lt; 10; $i++) {
     if ($i%2 == 0) {
@@ -144,7 +149,7 @@ for ($i = 0; $i &lt; 10; $i++) {
 </td>
 </tr>
 <tr>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 class A {
 function a(){
@@ -153,7 +158,7 @@ return 10;
 }
 </code></pre>
 </td>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 class A
 {
@@ -167,7 +172,7 @@ class A
 </td>
 </tr>
 <tr>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 namespace NS\Something;
 use \OtherNS\C;
@@ -180,7 +185,7 @@ $b = new C();
 $d = new D();
 </code></pre>
 </td>
-<td>
+<td style="text-align: left">
 <pre><code>&lt;?php
 namespace NS\Something;
 
@@ -206,6 +211,13 @@ $d = new D();
           <a href="https://github.com/dericofilho/php.tools/tarball/master" class="button">
             <small>Download</small>
             .tar.gz file
+          </a>
+          <a href="https://github.com/dericofilho/php.tools/issues" target="_blank" class="button">
+            Support
+          </a>
+          <a href="https://github.com/dericofilho/sublime-phpfmt" target="_blank" class="button">
+            <small>Sublime Text</small>
+            Plugin
           </a>
 
           <p class="repo-owner"><a href="https://github.com/dericofilho/php.tools"></a> is maintained by <a href="https://github.com/dericofilho">dericofilho</a>.</p>
