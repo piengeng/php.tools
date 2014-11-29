@@ -31,6 +31,9 @@
           <h1>
 <a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h1>
 
+You can install this application through git clone:<br><br>
+<p><code>git clone https://github.com/dericofilho/php.tools.git</code></p>
+or through composer:<br><br>
 <p><code>php composer.phar require dericofilho/fmt</code></p>
 
 <h1>
@@ -45,7 +48,7 @@ Also you may want to take a look the Sublime Text's plugin <a href="https://gith
 <br><br>
 <h3>
 <a id="kr-configuration" class="anchor" href="#kr-configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>K&amp;R configuration</h3>
-
+Use <p><code>vendor/bin/fmt.php filename filename2 ... filenameN</code></p>
 <table>
 <tr>
 <td style="text-align: left">Before</td>
@@ -120,8 +123,8 @@ $d = new D();
 </table>
 
 <h3>
-<a id="psr-configuration" class="anchor" href="#psr-configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>PSR configuration</h3>
-
+<a id="psr-configuration" class="anchor" href="#psr-configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>PSR1/2 configuration</h3>
+Use: <p><code>vendor/bin/fmt.php --psr filename filename2 ... filenameN</code></p>
 <table>
 <tr>
 <td style="text-align: left">Before</td>
