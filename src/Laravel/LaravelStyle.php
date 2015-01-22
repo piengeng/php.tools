@@ -30,7 +30,7 @@ class LaravelStyle extends FormatterPass {
 		$source = (new NoSpaceBetweenFunctionAndBracket())->format($source);
 		$source = (new SpaceAroundExclaimationMark())->format($source);
 		$source = (new NoneDocBlockMinorCleanUp())->format($source);
-		$source = (new SortUseNameSpace())->format($source);
+		$source = (new SortUseNamespace())->format($source);
 		$source = (new AlignEqualsByConsecutiveBlocks())->format($source);
 
 		return $source;

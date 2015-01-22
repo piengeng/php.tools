@@ -32,11 +32,43 @@ class LaravelStyleNew extends AdditionalPass {
 		$source = (new NoSpaceBetweenFunctionAndBracket())->format($source);
 		$source = (new SpaceAroundExclaimationMark())->format($source);
 		$source = (new NoneDocBlockMinorCleanUp())->format($source);
+
 		$source = (new SortUseNameSpace())->format($source);
-		$source = (new AlignEqualsByConsecutiveBlocks())->format($source);
-		// $source = $this->understand($source);
+		// $source = (new AlignEqualsByConsecutiveBlocks())->format($source);
 
 		return $source;
+	}
+
+	private function understand($source) {
+		print_r(explode("\n", $source));
+		echo "===================================\n";
+		print_r($this->tokensInLine($source));
+	}
+	private function tokensInLine($source) {
+		$tokens = token_get_all($source);
+		$processed = [];
+		$seen = 1; // token_get_all always starts with 1
+		$tokensLine = '';
+		foreach ($tokens as $index => $token) {
+			if (isset($token[2])) {
+				$currLine = $token[2];
+				if ($seen != $currLine) {
+					$processed[($seen - 1)] = $tokensLine;
+					// $tokensLine = token_name($token[0]) . "($index) ";
+					$tokensLine = token_name($token[0]) . " ";
+					$seen = $currLine;
+				} else {
+					// $tokensLine .= token_name($token[0]) . "($index) ";
+					$tokensLine .= token_name($token[0]) . " ";
+					// echo ($tokensLine);die;
+				}
+			} else {
+				// $tokensLine .= $token . "($index) ";
+				$tokensLine .= $token . " ";
+			}
+		}
+		$processed[($seen - 1)] = $tokensLine; // consider the last line
+		return $processed;
 	}
 
 	private function namespaceMergeWithOpenTag($source) {
@@ -138,38 +170,6 @@ class LaravelStyleNew extends AdditionalPass {
 
 	// 	return $this->code;
 	// }
-
-	private function understand($source) {
-		print_r(explode("\n", $source));
-		echo "===================================\n";
-		print_r($this->tokensInLine($source));
-	}
-	private function tokensInLine($source) {
-		$tokens = token_get_all($source);
-		$processed = [];
-		$seen = 1; // token_get_all always starts with 1
-		$tokensLine = '';
-		foreach ($tokens as $index => $token) {
-			if (isset($token[2])) {
-				$currLine = $token[2];
-				if ($seen != $currLine) {
-					$processed[($seen - 1)] = $tokensLine;
-					// $tokensLine = token_name($token[0]) . "($index) ";
-					$tokensLine = token_name($token[0]) . " ";
-					$seen = $currLine;
-				} else {
-					// $tokensLine .= token_name($token[0]) . "($index) ";
-					$tokensLine .= token_name($token[0]) . " ";
-					// echo ($tokensLine);die;
-				}
-			} else {
-				// $tokensLine .= $token . "($index) ";
-				$tokensLine .= $token . " ";
-			}
-		}
-		$processed[($seen - 1)] = $tokensLine; // consider the last line
-		return $processed;
-	}
 
 	// private function getConsecutiveFromArray($seenArray) {
 	// 	$temp = [];

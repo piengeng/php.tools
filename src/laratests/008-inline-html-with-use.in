@@ -1,0 +1,36 @@
+Dear user:
+use this;
+use another thing;
+use important thing;
+<?php
+
+namespace test\test;
+
+use Closure;
+use Illuminate\Config\FileEnvironmentVariablesLoader;
+use Illuminate\Config\FileLoader;
+
+class oneOne{
+    use Illuminate\Http\Response;
+    use Illuminate\Support\Contracts\ResponsePreparerInterface;
+    use Illuminate\Routing\RoutingServiceProvider;
+
+    use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
+    use Illuminate\Support\Facades\Facade;
+
+    use Closure;
+}
+?>
+use that;
+use power;
+
+<?php
+class twoTwo{
+    function test()
+    {
+        use lmno;
+        use abc;
+        use edfghijk;
+    }
+}
+//passes:LaravelStyle
