@@ -47,11 +47,11 @@ echo 'LaravelStyle further tests...', PHP_EOL;
 // phpfmtIt('laratests', 'laravel-master', '_phpfmt'); // use sparingly
 // phpfmtIt('laratests', 'framework-4.2', '_phpfmt'); // use sparingly
 require 'Laravel/LaravelStyleNew.php';
-require 'Laravel/NoSpaceBetweenFunctionAndBracket.php';
-require 'Laravel/SpaceAroundExclaimationMark.php';
-require 'Laravel/NoneDocBlockMinorCleanUp.php';
-require 'Laravel/SortUseNamespace.php';
-require 'Laravel/AlignEqualsByConsecutiveBlocks.php';
+// require 'Laravel/NoSpaceBetweenFunctionAndBracket.php';
+// require 'Laravel/SpaceAroundExclaimationMark.php';
+// require 'Laravel/NoneDocBlockMinorCleanUp.php';
+// require 'Laravel/SortUseNamespace.php';
+// require 'Laravel/AlignEqualsByConsecutiveBlocks.php';
 function phpfmtIt($container, $target, $appended) {
 	$fmt = new CodeFormatter();
 	$fmt->addPass(new TwoCommandsInSameLine());
@@ -126,9 +126,9 @@ function phpfmtIt($container, $target, $appended) {
 // laratests\laravel-master\app\start\global.php
 $qk = new CodeFormatter();
 $qk->addPass(new SmartLnAfterCurlyOpen());
-$qk->addPass(new LaravelStyle());
-$source = file_get_contents('laratests\spacearoundyell_before.php');
-file_put_contents('laratests\spacearoundyell_after.php', $qk->formatCode($source));
+$qk->addPass(new LaravelStyleNew());
+$source = file_get_contents('laratests\008-inline-html-with-use.in');
+file_put_contents('laratests\008-inline-html-with-use.out', $qk->formatCode($source));
 //
 //
 // ---------------------------------------------------------------------------------------------------------------
