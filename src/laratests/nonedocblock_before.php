@@ -1,0 +1,13 @@
+<?php
+	/*
+	| some text
+	 */
+
+	/*
+| fixing if this exist in core
+	 */
+
+	// this line is ignored
+
+	/** this is also ignored
+	 */
