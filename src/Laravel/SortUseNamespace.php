@@ -4,15 +4,12 @@ class SortUseNameSpace extends FormatterPass {
 		if (isset($foundTokens[T_USE])) {
 			return true;
 		}
-
 		return false;
 	}
-
 	public function format($source) {
 		$digFromHere = $this->tokensInLine($source);
 		$seenUseToken = [];
 		foreach ($digFromHere as $index => $line) {
-			$match = null;
 			if (preg_match('/^(?:T_WHITESPACE )?(T_USE) T_WHITESPACE /', $line, $match)) {
 				array_push($seenUseToken, $index);
 			}
@@ -20,23 +17,19 @@ class SortUseNameSpace extends FormatterPass {
 		$source = $this->sortTokenBlocks($seenUseToken, $source);
 		return $source;
 	}
-
 	private function sortTokenBlocks($seenArray, $source) {
 		$lines = explode("\n", $source);
 		$buckets = $this->getTokensBuckets($seenArray);
 		foreach ($buckets as $bucket) {
 			$start = $bucket[0];
 			$stop = $bucket[(count($bucket) - 1)];
-
 			$t_use = array_splice($lines, $start, ($stop - $start + 1));
 			$t_use = $this->sortByLength($t_use);
-
 			$head = array_splice($lines, 0, $start);
 			$lines = array_merge($head, $t_use, $lines);
 		}
 		return implode("\n", $lines); //$source;
 	}
-
 	private function getTokensBuckets($seenArray) {
 		$temp = [];
 		$seenBuckets = [];
@@ -54,9 +47,9 @@ class SortUseNameSpace extends FormatterPass {
 				array_push($seenBuckets, $temp); //push to bucket
 			}
 		}
+		// print_r($seenBuckets);
 		return $seenBuckets;
 	}
-
 	private function sortByLength($inArray) {
 		$outArray = [];
 		// prepend strlen in front, then sort, then remove prepend, done.
@@ -72,7 +65,6 @@ class SortUseNameSpace extends FormatterPass {
 		}
 		return $cleaned;
 	}
-
 	private function tokensInLine($source) {
 		$tokens = token_get_all($source);
 		$processed = [];

@@ -1,35 +1,31 @@
-Dear user:
+<?php echo "something";?>
+
+Dear userTwo:
 use this;
 use another thing;
 use important thing;
-<?php namespace test\test;
+<?php
 
-use Closure;
+use Closure\One;
+use Closure\Three;
 use Illuminate\Config\FileLoader;
-use Illuminate\Config\FileEnvironmentVariablesLoader;
 
-class oneOne{
-    use Illuminate\Http\Response;
-    use Illuminate\Routing\RoutingServiceProvider;
-    use Illuminate\Support\Contracts\ResponsePreparerInterface;
+Class CamelOne {
+	use Illuminate\Http\Response;
+	use Illuminate\Routing\RoutingServiceProvider;
+	use Illuminate\Support\Contracts\ResponsePreparerInterface;
 
-    use Illuminate\Support\Facades\Facade;
-    use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
+	use Illuminate\Support\Facades\Facade;
+	use Symfony\Component\HttpFoundation\Request;
 
-    use Closure;
+	use Closure\Two;
 }
+
+new FileLoader();
+new One();
+new Three();
 ?>
+
 use that;
 use power;
 
-<?php
-class twoTwo{
-    function test()
-
-	{
-        use abc;
-        use lmno;
-        use edfghijk;
-    }
-}
-//passes:LaravelStyle
