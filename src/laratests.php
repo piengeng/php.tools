@@ -42,16 +42,8 @@ if (!isset($opt['deployed'])) {
 ob_end_clean();
 
 // ---------------------------------------------------------------------------------------------------------------
-echo 'LaravelStyle further tests...', PHP_EOL;
+echo 'LaravelDecorator manual tests...', PHP_EOL;
 
-// phpfmtIt('laratests', 'laravel-master', '_phpfmt'); // use sparingly
-// phpfmtIt('laratests', 'framework-4.2', '_phpfmt'); // use sparingly
-require 'Laravel/LaravelStyleNew.php';
-// require 'Laravel/NoSpaceBetweenFunctionAndBracket.php';
-// require 'Laravel/SpaceAroundExclaimationMark.php';
-// require 'Laravel/NoneDocBlockMinorCleanUp.php';
-// require 'Laravel/SortUseNamespace.php';
-// require 'Laravel/AlignEqualsByConsecutiveBlocks.php';
 function phpfmtIt($container, $target, $appended) {
 	$fmt = new CodeFormatter();
 	$fmt->addPass(new TwoCommandsInSameLine());
@@ -68,21 +60,15 @@ function phpfmtIt($container, $target, $appended) {
 	$fmt->addPass(new ReindentColonBlocks());
 	$fmt->addPass(new ReindentLoopColonBlocks());
 	$fmt->addPass(new ReindentIfColonBlocks());
-	// $fmt->addPass(new AlignEquals());
-	// $fmt->addPass(new AlignDoubleArrow());
+	$fmt->addPass(new AlignEquals());
+	$fmt->addPass(new AlignDoubleArrow());
 	$fmt->addPass(new ReindentObjOps());
 	$fmt->addPass(new Reindent());
 	$fmt->addPass(new EliminateDuplicatedEmptyLines());
+	$fmt->addPass(new PSR2AlignObjOp());
 	$fmt->addPass(new LeftAlignComment());
 	$fmt->addPass(new RTrim());
-
-	if ($appended == '_new') {
-		$fmt->addPass(new SmartLnAfterCurlyOpen());
-		$fmt->addPass(new LaravelStyleNew());
-	} else {
-		$fmt->addPass(new SmartLnAfterCurlyOpen());
-		$fmt->addPass(new LaravelStyle());
-	}
+	LaravelDecorator::decorate($fmt);
 
 	$directory = $container . DIRECTORY_SEPARATOR . $target;
 	$it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory));
@@ -102,35 +88,15 @@ function phpfmtIt($container, $target, $appended) {
 	}
 	return true;
 }
+phpfmtIt('laratests', 'laravel-master', '_phpfmt');
+// phpfmtIt('laratests','laravel-master', '_new');
 
-// laratests\laravel-master\app\controllers\BaseController.php ! -> ' ! '
-// $ls = new LaravelStyleNew();
-// $source = file_get_contents('laratests\laravel-master_phpfmt\app\controllers\BaseController.php');
-// file_put_contents('laratests\laravel-master_new\app\controllers\BaseController.php', $ls->format($source));
+// phpfmtIt('laratests','framework-4.2', '_phpfmt');
+// phpfmtIt('laratests','framework-4.2', '_new');
 
-// laratests\laravel-master\app\config\compile.php
-// $ls = new LaravelStyleNew();
-// $source = file_get_contents('laratests\laravel-master_phpfmt\app\config\compile.php');
-// file_put_contents('laratests\laravel-master_new\app\config\compile.php', $ls->format($source));
+// $source = file_get_contents('laratests\008-inline-html-with-use.in');
+// file_put_contents('laratests\008-inline-html-with-use.out', $qk->formatCode($source));
 
-// laratests\laravel-master\app\filters.php function () and AllmanBracket
-
-// phpfmtIt('laratests', 'laravel-master', '_phpfmt');
-// phpfmtIt('laratests', 'laravel-master', '_new');
-
-// laratests\laravel-master\app\models\User.php Sort use
-// $ls = new LaravelStyleNew();
-// $source = file_get_contents('laratests\laravel-master_phpfmt\app\models\User.php');
-// file_put_contents('laratests\laravel-master_new\app\models\User.php', $ls->format($source));
-
-// laratests\laravel-master\app\start\global.php
-$qk = new CodeFormatter();
-$qk->addPass(new SmartLnAfterCurlyOpen());
-$qk->addPass(new LaravelStyleNew());
-$source = file_get_contents('laratests\008-inline-html-with-use.in');
-file_put_contents('laratests\008-inline-html-with-use.out', $qk->formatCode($source));
-//
-//
 // ---------------------------------------------------------------------------------------------------------------
 echo "Took ", (microtime(true) - $start), PHP_EOL;
 exit(0);
