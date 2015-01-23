@@ -16,7 +16,11 @@ class SpaceAroundExclamationMark extends FormatterPass {
 			$this->ptr = $index;
 			switch ($id) {
 				case ST_EXCLAMATION:
-					$this->appendCode(" $text ");
+					if (substr($this->code, -1) == ' ') {
+						$this->appendCode("$text ");
+					} else {
+						$this->appendCode(" $text ");
+					}
 					break;
 				default:
 					$this->appendCode($text);
