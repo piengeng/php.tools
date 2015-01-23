@@ -1,33 +1,27 @@
 <?php
 class AlignEqualsByConsecutiveBlocks extends FormatterPass {
-	public function candidate($source, $foundTokens)
-	{
-		if (isset($foundTokens[ST_EQUAL]) || isset($foundTokens[T_DOUBLE_ARROW]))
-		{
+	public function candidate($source, $foundTokens) {
+		if (isset($foundTokens[ST_EQUAL]) || isset($foundTokens[T_DOUBLE_ARROW])) {
 			return true;
 		}
 
 		return false;
 	}
 
-	public function format($source)
-	{
+	public function format($source) {
 		// should align '= and '=>'
 		$digFromHere = $this->tokensInLine($source);
 
-		$seenEquals       = [];
+		$seenEquals = [];
 		$seenDoubleArrows = [];
-		foreach ($digFromHere as $index => $line)
-		{
+		foreach ($digFromHere as $index => $line) {
 			$match = null;
-			if (preg_match('/^T_VARIABLE T_WHITESPACE =.+;/', $line, $match))
-			{
+			if (preg_match('/^T_VARIABLE T_WHITESPACE =.+;/', $line, $match)) {
 				array_push($seenEquals, $index);
 			}
 			$match = null;
 			if (preg_match('/^(?:T_WHITESPACE )?(T_CONSTANT_ENCAPSED_STRING|T_VARIABLE) T_WHITESPACE T_DOUBLE_ARROW /', $line, $match) &&
-				 ! strstr($line, 'T_ARRAY ( '))
-			{
+				!strstr($line, 'T_ARRAY ( ')) {
 				array_push($seenDoubleArrows, $index);
 			}
 		}
@@ -38,49 +32,38 @@ class AlignEqualsByConsecutiveBlocks extends FormatterPass {
 		return $source;
 	}
 
-	private function tokensInLine($source)
-	{
-		$tokens     = token_get_all($source);
-		$processed  = [];
-		$seen       = 1;
+	private function tokensInLine($source) {
+		$tokens = token_get_all($source);
+		$processed = [];
+		$seen = 1;
 		$tokensLine = '';
-		foreach ($tokens as $index => $token)
-		{
-			if (isset($token[2]))
-			{
+		foreach ($tokens as $index => $token) {
+			if (isset($token[2])) {
 				$currLine = $token[2];
-				if ($seen != $currLine)
-				{
+				if ($seen != $currLine) {
 					$processed[($seen - 1)] = $tokensLine;
-					$tokensLine = token_name($token[0])." ";
+					$tokensLine = token_name($token[0]) . " ";
 					$seen = $currLine;
+				} else {
+					$tokensLine .= token_name($token[0]) . " ";
 				}
-				else
-				{
-					$tokensLine .= token_name($token[0])." ";
-				}
-			}
-			else
-			{
-				$tokensLine .= $token." ";
+			} else {
+				$tokensLine .= $token . " ";
 			}
 		}
 		$processed[($seen - 1)] = $tokensLine;
 		return $processed;
 	}
 
-	private function generateConsecutiveFromArray($seenArray, $source)
-	{
+	private function generateConsecutiveFromArray($seenArray, $source) {
 		$lines = explode("\n", $source);
-		foreach ($this->getConsecutiveFromArray($seenArray) as $bucket)
-		{
+		foreach ($this->getConsecutiveFromArray($seenArray) as $bucket) {
 			//get max position of =
 			$maxPosition = 0;
 			$eq = ' =';
 			$toBeSorted = [];
-			foreach ($bucket as $indexInBucket)
-			{
-				$position    = strpos($lines[$indexInBucket], $eq);
+			foreach ($bucket as $indexInBucket) {
+				$position = strpos($lines[$indexInBucket], $eq);
 				$maxPosition = max($maxPosition, $position);
 				array_push($toBeSorted, $position);
 			}
@@ -89,24 +72,19 @@ class AlignEqualsByConsecutiveBlocks extends FormatterPass {
 			// ratio of highest : second highest > 1.5, else use the second highest
 			// just run the top 5 to seek the alternative
 			rsort($toBeSorted);
-			for ($i = 1; $i <= 5; $i++)
-			{
-				if (isset($toBeSorted[$i]))
-				{
-					if ($toBeSorted[($i - 1)] / $toBeSorted[$i] > 1.5)
-					{
+			for ($i = 1; $i <= 5; ++$i) {
+				if (isset($toBeSorted[$i])) {
+					if ($toBeSorted[($i - 1)] / $toBeSorted[$i] > 1.5) {
 						$maxPosition = $toBeSorted[$i];
 						break;
 					}
 				}
 			}
 			// insert space directly
-			foreach ($bucket as $indexInBucket)
-			{
+			foreach ($bucket as $indexInBucket) {
 				$delta = $maxPosition - strpos($lines[$indexInBucket], $eq);
-				if ($delta > 0)
-				{
-					$replace = str_repeat(' ', $delta).$eq;
+				if ($delta > 0) {
+					$replace = str_repeat(' ', $delta) . $eq;
 					$lines[$indexInBucket] = preg_replace("/$eq/", $replace, $lines[$indexInBucket]);
 				}
 			}
@@ -114,26 +92,20 @@ class AlignEqualsByConsecutiveBlocks extends FormatterPass {
 		return implode("\n", $lines);
 	}
 
-	private function getConsecutiveFromArray($seenArray)
-	{
+	private function getConsecutiveFromArray($seenArray) {
 		$temp = [];
 		$seenBuckets = [];
-		foreach ($seenArray as $j => $index)
-		{
-			if (0 !== $j)
-			{
-				if (($index - 1) !== $seenArray[($j - 1)])
-				{
-					if (count($temp) > 1)
-					{
+		foreach ($seenArray as $j => $index) {
+			if (0 !== $j) {
+				if (($index - 1) !== $seenArray[($j - 1)]) {
+					if (count($temp) > 1) {
 						array_push($seenBuckets, $temp); //push to bucket
 					}
 					$temp = []; // clear temp
 				}
 			}
 			array_push($temp, $index);
-			if ((count($seenArray) - 1) == $j and (count($temp) > 1))
-			{
+			if ((count($seenArray) - 1) == $j and (count($temp) > 1)) {
 				array_push($seenBuckets, $temp); //push to bucket
 			}
 		}
