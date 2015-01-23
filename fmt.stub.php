@@ -788,9 +788,6 @@ final class CodeFormatter {
 	public function addPass(FormatterPass $pass) {
 		array_unshift($this->passes, $pass);
 	}
-	public function getPasses() {
-		return array_reverse($this->passes);
-	}
 	public function removePass($passName) {
 		$idx = [];
 		foreach ($this->passes as $k => $pass) {
@@ -1893,6 +1890,18 @@ final class NormalizeLnAndLtrimLines extends FormatterPass {
 ;
 final class OrderUseClauses extends FormatterPass {
 	const OPENER_PLACEHOLDER = "<?php /*\x2 ORDERBY \x3*/";
+	private $sortFunction = null;
+
+	public function __construct(callable $sortFunction = null) {
+		$this->sortFunction = $sortFunction;
+		if (null == $sortFunction) {
+			$this->sortFunction = function ($useStack) {
+				natcasesort($useStack);
+				return $useStack;
+			};
+		}
+	}
+
 	public function candidate($source, $foundTokens) {
 		if (isset($foundTokens[T_USE])) {
 			return true;
@@ -1962,7 +1971,7 @@ final class OrderUseClauses extends FormatterPass {
 		if (empty($useStack)) {
 			return $source;
 		}
-		natcasesort($useStack);
+		$useStack = call_user_func($this->sortFunction, $useStack);
 		$aliasList = [];
 		$aliasCount = [];
 		foreach ($useStack as $use) {
@@ -2116,7 +2125,6 @@ final class OrderUseClauses extends FormatterPass {
 
 		return $return;
 	}
-
 }
 ;
 final class Reindent extends FormatterPass {
@@ -7062,43 +7070,273 @@ EOT;
 	}
 };
 
-class LaravelStyle extends FormatterPass {
-
-	// trying to match http://laravel.com/docs/4.2/contributions#coding-style
-	// PSR-0 and PSR-1 will use sublime-text settings.
-	// # The class namespace declaration must be on the same line as <?php. [ok]
-	// # A class' opening { must be on the same line as the class name. [ok]
-	// # Functions and control structures must use Allman style braces. [ok with bug]
-	// # Indent with tabs, align with spaces.
-	// ## tabs:not yet consider indent-with_space = true in phpfmt.sublime-settings
-	// ## align:waiting for bugs feedback]
-	// # addition: match formatting of laravel4.2/app/config/*.php & framework/**/*.php
-
-	private $foundTokens;
+class AlignEqualsByConsecutiveBlocks extends FormatterPass {
 	public function candidate($source, $foundTokens) {
-		$this->foundTokens = $foundTokens;
-		return true;
+		if (isset($foundTokens[ST_EQUAL])) {
+			return true;
+		}
+
+		return false;
 	}
 
 	public function format($source) {
-		$source = $this->namespaceMergeWithOpenTag($source);
-		$source = $this->allmanStyleBraces($source);
-		$source = (new RTrim())->format($source);
+		// should align '= and '=>'
+		$digFromHere = $this->tokensInLine($source);
 
-		$fmt = new TightConcat();
-		if ($fmt->candidate($source, $this->foundTokens)) {
-			$source = $fmt->format($source);
+		$seenEquals = [];
+		$seenDoubleArrows = [];
+		foreach ($digFromHere as $index => $line) {
+			$match = null;
+			if (preg_match('/^T_VARIABLE T_WHITESPACE =.+;/', $line, $match)) {
+				array_push($seenEquals, $index);
+			}
+			$match = null;
+			if (preg_match('/^(?:T_WHITESPACE )?(T_CONSTANT_ENCAPSED_STRING|T_VARIABLE) T_WHITESPACE T_DOUBLE_ARROW /', $line, $match) &&
+				!strstr($line, 'T_ARRAY ( ')) {
+				array_push($seenDoubleArrows, $index);
+			}
 		}
 
-		$source = $this->noneDocBlockMinorCleanUp($source);
-		$source = $this->alignConsecutiveEqualSign($source);
+		$source = $this->generateConsecutiveFromArray($seenEquals, $source);
+		$source = $this->generateConsecutiveFromArray($seenDoubleArrows, $source);
 
 		return $source;
 	}
 
-	private function namespaceMergeWithOpenTag($source) {
+	private function tokensInLine($source) {
+		$tokens = token_get_all($source);
+		$processed = [];
+		$seen = 1;
+		$tokensLine = '';
+		foreach ($tokens as $index => $token) {
+			if (isset($token[2])) {
+				$currLine = $token[2];
+				if ($seen != $currLine) {
+					$processed[($seen - 1)] = $tokensLine;
+					$tokensLine = token_name($token[0]) . " ";
+					$seen = $currLine;
+				} else {
+					$tokensLine .= token_name($token[0]) . " ";
+				}
+			} else {
+				$tokensLine .= $token . " ";
+			}
+		}
+		$processed[($seen - 1)] = $tokensLine;
+		return $processed;
+	}
+
+	private function generateConsecutiveFromArray($seenArray, $source) {
+		$lines = explode("\n", $source);
+		foreach ($this->getConsecutiveFromArray($seenArray) as $bucket) {
+			//get max position of =
+			$maxPosition = 0;
+			$eq = ' =';
+			$toBeSorted = [];
+			foreach ($bucket as $indexInBucket) {
+				$position = strpos($lines[$indexInBucket], $eq);
+				$maxPosition = max($maxPosition, $position);
+				array_push($toBeSorted, $position);
+			}
+
+			// find alternative max if there's a further = position
+			// ratio of highest : second highest > 1.5, else use the second highest
+			// just run the top 5 to seek the alternative
+			rsort($toBeSorted);
+			for ($i = 1; $i <= 5; $i++) {
+				if (isset($toBeSorted[$i])) {
+					if ($toBeSorted[($i - 1)] / $toBeSorted[$i] > 1.5) {
+						$maxPosition = $toBeSorted[$i];
+						break;
+					}
+				}
+			}
+			// insert space directly
+			foreach ($bucket as $indexInBucket) {
+				$delta = $maxPosition - strpos($lines[$indexInBucket], $eq);
+				if ($delta > 0) {
+					$replace = str_repeat(' ', $delta) . $eq;
+					$lines[$indexInBucket] = preg_replace("/$eq/", $replace, $lines[$indexInBucket]);
+				}
+			}
+		}
+		return implode("\n", $lines);
+	}
+
+	private function getConsecutiveFromArray($seenArray) {
+		$temp = [];
+		$seenBuckets = [];
+		foreach ($seenArray as $j => $index) {
+			if (0 !== $j) {
+				if (($index - 1) !== $seenArray[($j - 1)]) {
+					if (count($temp) > 1) {
+						array_push($seenBuckets, $temp); //push to bucket
+					}
+					$temp = []; // clear temp
+				}
+			}
+			array_push($temp, $index);
+			if ((count($seenArray) - 1) == $j and (count($temp) > 1)) {
+				array_push($seenBuckets, $temp); //push to bucket
+			}
+		}
+		return $seenBuckets;
+	}
+}
+;
+class AllmanStyleBraces extends FormatterPass {
+	public function candidate($source, $foundTokens) {
+		return true;
+	}
+
+	public function format($source) {
 		$this->tkns = token_get_all($source);
 		$this->code = '';
+		$foundStack = [];
+		$currentIndentation = 0;
+
+		while (list($index, $token) = each($this->tkns)) {
+			list($id, $text) = $this->getToken($token);
+			$this->ptr = $index;
+			switch ($id) {
+				case T_FUNCTION:
+					$currentIndentation = 0;
+					$poppedID = array_pop($foundStack);
+					if (true === $poppedID['implicit']) {
+						list($prevId, $prevText) = $this->inspectToken(-1);
+						$currentIndentation = substr_count($prevText, $this->indentChar);
+					}
+					$foundStack[] = $poppedID;
+					$this->appendCode($text);
+					break;
+				case ST_CURLY_OPEN:
+					if ($this->leftUsefulTokenIs([ST_PARENTHESES_CLOSE, T_ELSE, T_FINALLY, T_DO])) {
+						list($prevId, $prevText) = $this->getToken($this->leftToken());
+						if (!$this->hasLn($prevText)) {
+							$this->appendCode($this->getCrlfIndent());
+						}
+					}
+					$indentToken = [
+						'id' => $id,
+						'implicit' => true,
+					];
+					$adjustedIndendation = max($currentIndentation - $this->indent, 0);
+					$this->appendCode(str_repeat($this->indentChar, $adjustedIndendation) . $text);
+					$currentIndentation = 0;
+					if ($this->hasLnAfter()) {
+						$indentToken['implicit'] = false;
+						$this->setIndent(+1);
+					}
+					if (!$this->hasLnAfter() && !$this->leftUsefulTokenIs([T_OBJECT_OPERATOR, T_DOUBLE_COLON])) {
+						$this->setIndent(+1);
+						$this->appendCode($this->getCrlfIndent());
+						$this->setIndent(-1);
+					}
+					$foundStack[] = $indentToken;
+					break;
+
+				case T_DOLLAR_OPEN_CURLY_BRACES:
+				case T_CURLY_OPEN:
+					if ($this->leftUsefulTokenIs([ST_PARENTHESES_CLOSE, T_ELSE, T_FINALLY, T_DO])) {
+						list($prevId, $prevText) = $this->getToken($this->leftToken());
+						if (!$this->hasLn($prevText)) {
+							$this->appendCode($this->getCrlfIndent());
+						}
+					}
+					$indentToken = [
+						'id' => $id,
+						'implicit' => true,
+					];
+					$this->appendCode($text);
+					if ($this->hasLnAfter()) {
+						$indentToken['implicit'] = false;
+						$this->setIndent(+1);
+					}
+					$foundStack[] = $indentToken;
+					break;
+
+				case ST_BRACKET_OPEN:
+				case ST_PARENTHESES_OPEN:
+					$indentToken = [
+						'id' => $id,
+						'implicit' => true,
+					];
+					$this->appendCode($text);
+					if ($this->hasLnAfter()) {
+						$indentToken['implicit'] = false;
+						$this->setIndent(+1);
+					}
+					$foundStack[] = $indentToken;
+					break;
+
+				case ST_BRACKET_CLOSE:
+				case ST_PARENTHESES_CLOSE:
+				case ST_CURLY_CLOSE:
+					$poppedID = array_pop($foundStack);
+					if (false === $poppedID['implicit']) {
+						$this->setIndent(-1);
+					}
+					$this->appendCode($text);
+					break;
+
+				case T_ELSE:
+				case T_ELSEIF:
+				case T_FINALLY:
+					list($prevId, $prevText) = $this->getToken($this->leftToken());
+					if (!$this->hasLn($prevText) && T_OPEN_TAG != $prevId) {
+						$this->appendCode($this->getCrlfIndent());
+					}
+					$this->appendCode($text);
+					break;
+
+				case T_CATCH:
+					if (' ' == substr($this->code, -1, 1)) {
+						$this->code = substr($this->code, 0, -1);
+					}
+					list($prevId, $prevText) = $this->getToken($this->leftToken());
+					if (!$this->hasLn($prevText)) {
+						$this->appendCode($this->getCrlfIndent());
+					}
+					$this->appendCode($text);
+					break;
+
+				default:
+					$this->appendCode($text);
+			}
+		}
+
+		return $this->code;
+	}
+}
+;
+class LaravelDecorator {
+	public static function decorate(CodeFormatter &$fmt) {
+		$fmt->removePass('AlignEquals');
+		$fmt->removePass('AlignDoubleArrow');
+		$fmt->addPass(new NamespaceMergeWithOpenTag());
+		$fmt->addPass(new AllmanStyleBraces());
+		$fmt->addPass(new RTrim());
+		$fmt->addPass(new TightConcat());
+		$fmt->addPass(new NoSpaceBetweenFunctionAndBracket());
+		$fmt->addPass(new SpaceAroundExclamationMark());
+		$fmt->addPass(new NoneDocBlockMinorCleanUp());
+		$fmt->addPass(new SortUseNameSpace());
+		$fmt->addPass(new AlignEqualsByConsecutiveBlocks());
+	}
+};
+class NamespaceMergeWithOpenTag extends FormatterPass {
+	public function candidate($source, $foundTokens) {
+		if (isset($foundTokens[T_NAMESPACE])) {
+			return true;
+		}
+
+		return false;
+	}
+
+	public function format($source) {
+		$this->tkns = token_get_all($source);
+		$this->code = '';
+
 		while (list($index, $token) = each($this->tkns)) {
 			list($id, $text) = $this->getToken($token);
 			$this->ptr = $index;
@@ -7115,62 +7353,17 @@ class LaravelStyle extends FormatterPass {
 
 		return $this->code;
 	}
-
-	private function allmanStyleBraces($source) {
-		$this->tkns = token_get_all($source);
-		$this->code = '';
-		$max_detected_indent = 0;
-		while (list($index, $token) = each($this->tkns)) {
-			list($id, $text) = $this->getToken($token);
-			$this->ptr = $index;
-			switch ($id) {
-				case T_DOLLAR_OPEN_CURLY_BRACES:
-				case T_CURLY_OPEN:
-				case ST_CURLY_OPEN:
-					if ($this->leftUsefulTokenIs([ST_PARENTHESES_CLOSE, T_ELSE, T_FINALLY, T_DO])) {
-						list($prevId, $prevText) = $this->getToken($this->leftToken());
-						if (!$this->hasLn($prevText)) {
-							$this->appendCode($this->getCrlfIndent());
-						}
-					}
-					$this->setIndent(+1);
-					$this->appendCode($text);
-					break;
-
-				case ST_CURLY_CLOSE:
-					$this->setIndent(-1);
-					$this->appendCode($text);
-					break;
-
-				case T_ELSE:
-				case T_ELSEIF:
-				case T_FINALLY:
-					list($prevId, $prevText) = $this->getToken($this->leftToken());
-					if (!$this->hasLn($prevText) && T_OPEN_TAG != $prevId) {
-						$this->appendCode($this->getCrlfIndent());
-					}
-					$this->appendCode($text);
-					break;
-				case T_CATCH:
-					if (' ' == substr($this->code, -1, 1)) {
-						$this->code = substr($this->code, 0, -1);
-					}
-					list($prevId, $prevText) = $this->getToken($this->leftToken());
-					if (!$this->hasLn($prevText)) {
-						$this->appendCode($this->getCrlfIndent());
-					}
-					$this->appendCode($text);
-					break;
-				default:
-					$this->appendCode($text);
-			}
+}
+;
+class NoneDocBlockMinorCleanUp extends FormatterPass {
+	public function candidate($source, $foundTokens) {
+		if (isset($foundTokens[T_COMMENT])) {
+			return true;
 		}
-
-		return $this->code;
+		return false;
 	}
 
-	private function noneDocBlockMinorCleanUp($source) {
-		// # addition: match formatting of laravel4.2/app/config/app.php
+	public function format($source) {
 		$this->tkns = token_get_all($source);
 		$this->code = '';
 		while (list($index, $token) = each($this->tkns)) {
@@ -7178,156 +7371,108 @@ class LaravelStyle extends FormatterPass {
 			$this->ptr = $index;
 			switch ($id) {
 				case T_COMMENT:
-					if (substr($text, 0, 3) != '/**') {
+					if ((substr($text, 0, 3) != '/**') &&
+						(substr($text, 0, 2) != '//')) {
 						list(, $prevText) = $this->inspectToken(-1);
 						$counts = substr_count($prevText, "\t");
 						$replacement = "\n" . str_repeat("\t", $counts);
-						$this->appendCode(preg_replace('/\n(\s+)/', $replacement, $text));
+						$this->appendCode(preg_replace('/\n\s*/', $replacement, $text));
+					} else {
+						$this->appendCode($text);
 					}
 					break;
 				default:
 					$this->appendCode($text);
 			}
 		}
-
 		return $this->code;
-	}
-	private function tokensInLine($source) {
-		$tokens = token_get_all($source);
-		$processed = [];
-		$seen = 1; // token_get_all always starts with 1
-		$tokensLine = '';
-		foreach ($tokens as $index => $token) {
-			if (isset($token[2])) {
-				$currLine = $token[2];
-				if ($seen != $currLine) {
-					$processed[($seen - 1)] = $tokensLine;
-					// $tokensLine = token_name($token[0]) . "($index) ";
-					$tokensLine = token_name($token[0]) . " ";
-					$seen = $currLine;
-				} else {
-					// $tokensLine .= token_name($token[0]) . "($index) ";
-					$tokensLine .= token_name($token[0]) . " ";
-					// echo ($tokensLine);die;
-				}
-			} else {
-				// $tokensLine .= $token . "($index) ";
-				$tokensLine .= $token . " ";
-			}
-		}
-		$processed[($seen - 1)] = $tokensLine; // consider the last line
-		return $processed;
-	}
-
-	private function getConsecutiveFromArray($seenArray) {
-		$temp = [];
-		$seenBuckets = [];
-		foreach ($seenArray as $j => $index) {
-			// echo "$j => $index ";
-			if (0 !== $j) {
-				if (($index - 1) !== $seenArray[($j - 1)]) {
-					// echo "diff with previous ";
-					if (count($temp) > 1) {
-						array_push($seenBuckets, $temp); //push to bucket
-						                                 // echo "pushed ";
-					}
-					$temp = []; // clear temp
-				}
-			}
-			array_push($temp, $index);
-			if ((count($seenArray) - 1) == $j and (count($temp) > 1)) {
-				                                 // echo "reached end ";
-				array_push($seenBuckets, $temp); //push to bucket
-			}
-			// echo PHP_EOL;
-		}
-		return $seenBuckets;
-	}
-
-	private function generateConsecutiveFromArray($seenArray, $source) {
-		$lines = explode("\n", $source);
-		// print_r($this->getConsecutiveFromArray($seenArray));
-		foreach ($this->getConsecutiveFromArray($seenArray) as $bucket) {
-			//get max position of =
-			$maxPosition = 0;
-			$eq = ' =';
-			$toBeSorted = [];
-			foreach ($bucket as $indexInBucket) {
-				// echo "$indexInBucket(", strpos($lines[$indexInBucket], $eq), ') ';
-				$position = strpos($lines[$indexInBucket], $eq);
-				$maxPosition = max($maxPosition, $position);
-				array_push($toBeSorted, $position);
-			}
-			// echo ' ', $maxPosition, PHP_EOL;
-
-			// find alternative max if there's a further = position
-			// ratio of highest : second highest > 1.5, else use the second highest
-			// just run the top 5 to seek the laternative
-			rsort($toBeSorted);
-			// print_r($toBeSorted);
-			for ($i = 1; $i <= 5; ++$i) {
-				if (isset($toBeSorted[$i])) {
-					if ($toBeSorted[($i - 1)] / $toBeSorted[$i] > 1.5) {
-						$maxPosition = $toBeSorted[$i];
-						break;
-					}
-				}
-			}
-			// insert space directly
-			foreach ($bucket as $indexInBucket) {
-				$delta = $maxPosition - strpos($lines[$indexInBucket], $eq);
-				if ($delta > 0) {
-					$replace = str_repeat(' ', $delta) . $eq;
-					$lines[$indexInBucket] = preg_replace("/$eq/", $replace, $lines[$indexInBucket]);
-				}
-				// echo $lines[$indexInBucket], PHP_EOL;
-			}
-			// break;
-		}
-		                              // print_r($this->getConsecutiveFromArray($seenDoubleArrows));
-		return implode("\n", $lines); //$source;
-	}
-
-	private function alignConsecutiveEqualSign($source) {
-		// should align '= and '=>'
-		$digFromHere = $this->tokensInLine($source);
-
-		$seenEquals = [];
-		$seenDoubleArrows = [];
-		foreach ($digFromHere as $index => $line) {
-			if (preg_match('/^T_VARIABLE T_WHITESPACE =.+;/', $line, $match)) {
-				array_push($seenEquals, $index);
-			}
-			if (preg_match('/^T_CONSTANT_ENCAPSED_STRING T_WHITESPACE T_DOUBLE_ARROW /', $line, $match) and
-				!strstr($line, 'T_ARRAY ( ')) {
-				array_push($seenDoubleArrows, $index);
-			}
-		}
-		// print_r($seenEquals);
-		// print_r($seenDoubleArrows);
-		$source = $this->generateConsecutiveFromArray($seenEquals, $source);
-		$source = $this->generateConsecutiveFromArray($seenDoubleArrows, $source);
-
-		return $source;
 	}
 }
 ;
-class LaravelDecorator {
-	public static function decorate(CodeFormatter &$fmt) {
-		$passes = $fmt->getPasses();
+class NoSpaceBetweenFunctionAndBracket extends FormatterPass {
+	public function candidate($source, $foundTokens) {
+		if (isset($foundTokens[T_FUNCTION])) {
+			return true;
+		}
 
-		$fmt = new CodeFormatter();
+		return false;
+	}
 
-		foreach ($passes as $pass) {
-			$fmt->addPass($pass);
-			if (get_class($pass) == 'AddMissingCurlyBraces') {
-				$fmt->addPass(new SmartLnAfterCurlyOpen());
+	public function format($source) {
+		$this->tkns = token_get_all($source);
+		$this->code = '';
+
+		while (list($index, $token) = each($this->tkns)) {
+			list($id, $text) = $this->getToken($token);
+			$this->ptr = $index;
+			switch ($id) {
+				case T_FUNCTION:
+					if ($this->rightTokenIs([T_WHITESPACE, '('])) {
+						$grab = $text;
+						$grab .= $this->walkAndAccumulateUntil($this->tkns, '(');
+						$this->appendCode(str_replace(' ', '', $grab));
+					} else {
+						$this->appendCode($text);
+					}
+					break;
+				default:
+					$this->appendCode($text);
+					break;
 			}
 		}
 
-		$fmt->addPass(new LaravelStyle());
+		return $this->code;
 	}
-};
+}
+;
+class SortUseNameSpace extends FormatterPass {
+	private $pass = null;
+	public function __construct() {
+		$sortFunction = function ($useStack) {
+			usort($useStack, function ($a, $b) {
+				return strlen($a) - strlen($b);
+			});
+			return $useStack;
+		};
+		$this->pass = new OrderUseClauses($sortFunction);
+	}
+	public function candidate($source, $foundTokens) {
+		return $this->pass->candidate($source, $foundTokens);
+	}
+	public function format($source) {
+		return $this->pass->format($source);
+	}
+}
+;
+class SpaceAroundExclamationMark extends FormatterPass {
+	public function candidate($source, $foundTokens) {
+		if (isset($foundTokens[ST_EXCLAMATION])) {
+			return true;
+		}
+		return false;
+	}
+
+	public function format($source) {
+		$this->tkns = token_get_all($source);
+		$this->code = '';
+
+		while (list($index, $token) = each($this->tkns)) {
+			list($id, $text) = $this->getToken($token);
+			$this->ptr = $index;
+			switch ($id) {
+				case ST_EXCLAMATION:
+					$this->appendCode(" $text ");
+					break;
+				default:
+					$this->appendCode($text);
+					break;
+			}
+		}
+
+		return $this->code;
+	}
+}
+;
 
 function extractFromArgv($argv, $item) {
 	return array_values(
@@ -7359,7 +7504,7 @@ if (!isset($in_phar)) {
 	$in_phar = false;
 }
 if (!isset($testEnv)) {
-	function show_help($argv, $enable_cache, $in_phar) {
+	function showHelp($argv, $enable_cache, $in_phar) {
 		echo 'Usage: ' . $argv[0] . ' [-hv] [-o=FILENAME] [--config=FILENAME] ' . ($enable_cache ? '[--cache[=FILENAME]] ' : '') . '[--setters_and_getters=type] [--constructor=type] [--psr] [--psr1] [--psr1-naming] [--psr2] [--indent_with_space=SIZE] [--enable_auto_align] [--visibility_order] <target>', PHP_EOL;
 		$options = [
 			'--cache[=FILENAME]' => 'cache file. Default: ',
@@ -7509,7 +7654,7 @@ if (!isset($testEnv)) {
 		$opts = array_merge($ini_opts, $opts);
 	}
 	if (isset($opts['h']) || isset($opts['help'])) {
-		show_help($argv, $enable_cache, $in_phar);
+		showHelp($argv, $enable_cache, $in_phar);
 	}
 
 	if (isset($opts['help-pass'])) {
@@ -7906,7 +8051,7 @@ if (!isset($testEnv)) {
 			exit(255);
 		}
 	} else {
-		show_help($argv, $enable_cache, $in_phar);
+		showHelp($argv, $enable_cache, $in_phar);
 	}
 	exit(0);
 }

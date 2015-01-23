@@ -93,13 +93,14 @@ require 'Additionals/TightConcat.php';
 require 'Additionals/WrongConstructorName.php';
 require 'Additionals/YodaComparisons.php';
 
-require 'Laravel/LaravelStyle.php';
-require 'Laravel/LaravelDecorator.php';
-require 'Laravel/NoSpaceBetweenFunctionAndBracket.php';
 require 'Laravel/AlignEqualsByConsecutiveBlocks.php';
-require 'Laravel/SpaceAroundExclaimationMark.php';
+require 'Laravel/AllmanStyleBraces.php';
+require 'Laravel/LaravelDecorator.php';
+require 'Laravel/NamespaceMergeWithOpenTag.php';
 require 'Laravel/NoneDocBlockMinorCleanUp.php';
+require 'Laravel/NoSpaceBetweenFunctionAndBracket.php';
 require 'Laravel/SortUseNamespace.php';
+require 'Laravel/SpaceAroundExclamationMark.php';
 
 function extractFromArgv($argv, $item) {
 	return array_values(

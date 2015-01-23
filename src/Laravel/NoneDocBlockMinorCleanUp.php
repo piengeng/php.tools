@@ -1,5 +1,5 @@
 <?php
-class NoneDocBlockMinorCleanUp extends AdditionalPass {
+class NoneDocBlockMinorCleanUp extends FormatterPass {
 	public function candidate($source, $foundTokens) {
 		if (isset($foundTokens[T_COMMENT])) {
 			return true;
@@ -19,7 +19,6 @@ class NoneDocBlockMinorCleanUp extends AdditionalPass {
 						(substr($text, 0, 2) != '//')) {
 						list(, $prevText) = $this->inspectToken(-1);
 						$counts = substr_count($prevText, "\t");
-						// echo "apparently $counts \n";
 						$replacement = "\n" . str_repeat("\t", $counts);
 						$this->appendCode(preg_replace('/\n\s*/', $replacement, $text));
 					} else {
@@ -31,45 +30,5 @@ class NoneDocBlockMinorCleanUp extends AdditionalPass {
 			}
 		}
 		return $this->code;
-	}
-
-	/**
-	 * @codeCoverageIgnore
-	 */
-	public function getDescription() {
-		return 'Realign /* block, not /** nor //';
-	}
-
-	/**
-	 * @codeCoverageIgnore
-	 */
-	public function getExample() {
-		return <<<'EOT'
-<?php
-	/*
-	| some text
-	 */
-
-	/*
-| fixing if this exist in core
-	 */
-
-	// this line is ignored
-
-	/** this is also ignored
-	 */
-?>
-to
-<?php
-	/*
-	| some text
-	*/
-
-	// this line is ignored
-
-	/** this is also ignored
-	 */
-?>
-EOT;
 	}
 }

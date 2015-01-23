@@ -65,6 +65,5 @@ function test() {
 		),
 	);
 }
-//passes:Default,LaravelStyle
 //version:5.5.0
 //skipHHVM

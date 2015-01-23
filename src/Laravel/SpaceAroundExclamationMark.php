@@ -1,10 +1,9 @@
 <?php
-class NoSpaceBetweenFunctionAndBracket extends FormatterPass {
+class SpaceAroundExclamationMark extends FormatterPass {
 	public function candidate($source, $foundTokens) {
-		if (isset($foundTokens[T_FUNCTION])) {
+		if (isset($foundTokens[ST_EXCLAMATION])) {
 			return true;
 		}
-
 		return false;
 	}
 
@@ -16,14 +15,8 @@ class NoSpaceBetweenFunctionAndBracket extends FormatterPass {
 			list($id, $text) = $this->getToken($token);
 			$this->ptr = $index;
 			switch ($id) {
-				case T_FUNCTION:
-					if ($this->rightTokenIs([T_WHITESPACE, '('])) {
-						$grab = $text;
-						$grab .= $this->walkAndAccumulateUntil($this->tkns, '(');
-						$this->appendCode(str_replace(' ', '', $grab));
-					} else {
-						$this->appendCode($text);
-					}
+				case ST_EXCLAMATION:
+					$this->appendCode(" $text ");
 					break;
 				default:
 					$this->appendCode($text);
