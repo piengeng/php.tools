@@ -3,6 +3,7 @@ class LaravelDecorator {
 	public static function decorate(CodeFormatter &$fmt) {
 		$fmt->removePass('AlignEquals');
 		$fmt->removePass('AlignDoubleArrow');
+		$fmt->removePass('AddMissingCurlyBraces');
 		$fmt->addPass(new NamespaceMergeWithOpenTag());
 		$fmt->addPass(new AllmanStyleBraces());
 		$fmt->addPass(new RTrim());
@@ -12,5 +13,8 @@ class LaravelDecorator {
 		$fmt->addPass(new NoneDocBlockMinorCleanUp());
 		$fmt->addPass(new SortUseNameSpace());
 		$fmt->addPass(new AlignEqualsByConsecutiveBlocks());
+		$fmt->addPass(new SpaceBetweenBracketVsVariableReturnBreakString());
+		$fmt->addPass(new KeepEmptyCurlyBraces());
+		// $fmt->addPass(new KeepSingleLineNonEmptyCurlyBraces());	// do not use this, failing miserably
 	}
 }

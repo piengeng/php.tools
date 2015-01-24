@@ -101,6 +101,9 @@ require 'Laravel/NoneDocBlockMinorCleanUp.php';
 require 'Laravel/NoSpaceBetweenFunctionAndBracket.php';
 require 'Laravel/SortUseNamespace.php';
 require 'Laravel/SpaceAroundExclamationMark.php';
+require 'Laravel/SpaceBetweenBracketVsVariableReturnBreakString.php';
+require 'Laravel/KeepEmptyCurlyBraces.php';
+require 'Laravel/KeepSingleLineNonEmptyCurlyBraces.php';
 
 function extractFromArgv($argv, $item) {
 	return array_values(
