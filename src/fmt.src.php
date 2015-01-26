@@ -95,11 +95,14 @@ require 'Additionals/YodaComparisons.php';
 
 require 'Laravel/AlignEqualsByConsecutiveBlocks.php';
 require 'Laravel/AllmanStyleBraces.php';
+require 'Laravel/AllmanStyleBracesByPienGeng.php';
 require 'Laravel/LaravelDecorator.php';
 require 'Laravel/NamespaceMergeWithOpenTag.php';
 require 'Laravel/NoneDocBlockMinorCleanUp.php';
+require 'Laravel/NoSpaceBeforeParenthesisClose.php';
 require 'Laravel/NoSpaceBetweenFunctionAndBracket.php';
 require 'Laravel/SortUseNamespace.php';
+require 'Laravel/SpaceAroundDot.php';
 require 'Laravel/SpaceAroundExclamationMark.php';
 require 'Laravel/SpaceBetweenBracketVsVariableReturnBreakString.php';
 require 'Laravel/KeepEmptyCurlyBraces.php';
